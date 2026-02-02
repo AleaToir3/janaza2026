@@ -1,0 +1,21 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Collection janazas
+    match /janazas/{janazaId} {
+      // Lecture publique : tout le monde peut lire les janazas
+      allow read: if true;
+      
+      // Création : uniquement pour les utilisateurs authentifiés
+      allow create: if request.auth != null 
+                    && request.resource.data.created_by == request.auth.uid
+                    && request.resource.data.created_at == request.time;
+      
+      // Mise à jour et suppression : uniquement le créateur du document
+      allow update, delete: if request.auth != null 
+                            && request.auth.uid == resource.data.created_by;
+    }
+  }
+}
