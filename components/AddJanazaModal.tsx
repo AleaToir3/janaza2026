@@ -1,10 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebaseConfig';
 import { User } from 'firebase/auth';
 import { JanazaFormData } from '@/types/janaza';
+import { useJsApiLoader } from '@react-google-maps/api';
+
+const LIBRARIES: ("places")[] = ["places"];
 
 interface AddJanazaModalProps {
     user: User;
@@ -15,12 +18,22 @@ interface AddJanazaModalProps {
 export default function AddJanazaModal({ user, onClose, onSuccess }: AddJanazaModalProps) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    const { isLoaded: scriptLoaded, loadError } = useJsApiLoader({
+        id: 'google-map-script',
+        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+        libraries: LIBRARIES,
+    });
+
+    const addressInputRef = useRef<HTMLInputElement>(null);
+    const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+
     const [formData, setFormData] = useState<JanazaFormData>({
         nom_defunt: '',
         heure_priere: '',
         nom_mosquee: '',
         adresse_mosquee: '',
-        coordonnees: { lat: 48.8566, lng: 2.3522 }, // Paris par défaut
+        coordonnees: { lat: 48.8566, lng: 2.3522 },
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -28,15 +41,51 @@ export default function AddJanazaModal({ user, onClose, onSuccess }: AddJanazaMo
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleCoordChange = (field: 'lat' | 'lng', value: string) => {
-        setFormData(prev => ({
-            ...prev,
-            coordonnees: {
-                ...prev.coordonnees,
-                [field]: parseFloat(value) || 0,
-            },
-        }));
-    };
+    /**
+     * Initialisation de l'Autocomplete Google Places
+     * Se déclenche une fois que le script Google Maps est chargé.
+     */
+    useEffect(() => {
+        if (scriptLoaded && addressInputRef.current && !autocompleteRef.current) {
+            const options = {
+                fields: ["formatted_address", "geometry", "name"],
+                strictBounds: false,
+            };
+
+            autocompleteRef.current = new google.maps.places.Autocomplete(
+                addressInputRef.current,
+                options
+            );
+
+            // Écouter l'événement standard de sélection
+            autocompleteRef.current.addListener("place_changed", () => {
+                const place = autocompleteRef.current?.getPlace();
+
+                if (place && place.geometry && place.geometry.location) {
+                    const lat = place.geometry.location.lat();
+                    const lng = place.geometry.location.lng();
+                    const address = place.formatted_address || place.name || "";
+
+                    setFormData(prev => ({
+                        ...prev,
+                        adresse_mosquee: address,
+                        coordonnees: { lat, lng }
+                    }));
+                    setError('');
+                } else {
+                    console.warn("Aucune géométrie trouvée pour ce lieu");
+                }
+            });
+        }
+    }, [scriptLoaded]);
+
+
+    // Gérer l'erreur de chargement de l'API
+    useEffect(() => {
+        if (loadError) {
+            setError(`Erreur Google Maps: ${loadError.message}`);
+        }
+    }, [loadError]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -44,6 +93,13 @@ export default function AddJanazaModal({ user, onClose, onSuccess }: AddJanazaMo
         setLoading(true);
 
         try {
+            // Petite validation : on vérifie si on a bien une adresse
+            // Note: avec Google, l'utilisateur peut taper du texte sans cliquer. 
+            // Idéalement, on force le choix, mais ici on reste souple.
+            if (!formData.adresse_mosquee) {
+                throw new Error("Veuillez entrer une adresse.");
+            }
+
             const janazaData = {
                 nom_defunt: formData.nom_defunt,
                 heure_priere: Timestamp.fromDate(new Date(formData.heure_priere)),
@@ -58,45 +114,16 @@ export default function AddJanazaModal({ user, onClose, onSuccess }: AddJanazaMo
             onSuccess();
             onClose();
         } catch (err: any) {
-            setError('Erreur lors de l\'ajout : ' + err.message);
+            setError(err.message || 'Une erreur est survenue');
         } finally {
             setLoading(false);
         }
     };
 
-    const geocodeAddress = async () => {
-        if (!formData.adresse_mosquee) {
-            setError('Veuillez entrer une adresse');
-            return;
-        }
-
-        try {
-            const response = await fetch(
-                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-                    formData.adresse_mosquee
-                )}`
-            );
-            const data = await response.json();
-
-            if (data && data.length > 0) {
-                setFormData(prev => ({
-                    ...prev,
-                    coordonnees: {
-                        lat: parseFloat(data[0].lat),
-                        lng: parseFloat(data[0].lon),
-                    },
-                }));
-                setError('');
-            } else {
-                setError('Adresse introuvable. Essayez de préciser la ville.');
-            }
-        } catch (err) {
-            setError('Service de géolocalisation indisponible.');
-        }
-    };
-
     return (
         <div className="fixed inset-0 z-[2000] md:flex md:items-center md:justify-center">
+
+            {/* useJsApiLoader is managing the script loading */}
 
             {/* Backdrop */}
             <div
@@ -107,7 +134,7 @@ export default function AddJanazaModal({ user, onClose, onSuccess }: AddJanazaMo
             {/* Modal Box */}
             <div className="relative w-full h-full md:h-auto md:max-h-[90vh] md:max-w-2xl bg-white md:rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
 
-                {/* Close Button & Header Mobile */}
+                {/* Close Button Mobile */}
                 <div className="flex items-center justify-between px-6 pt-6 pb-2 md:hidden">
                     <h3 className="text-xl font-bold text-slate-900">Nouvelle Prière</h3>
                     <button
@@ -135,7 +162,7 @@ export default function AddJanazaModal({ user, onClose, onSuccess }: AddJanazaMo
                             📍
                         </div>
                         <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Ajouter une Janaza</h3>
-                        <p className="text-slate-500 mt-1">Partagez les informations pour permettre à la communauté de participer.</p>
+                        <p className="text-slate-500 mt-1">Remplissez les informations ci-dessous.</p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-6">
@@ -168,75 +195,56 @@ export default function AddJanazaModal({ user, onClose, onSuccess }: AddJanazaMo
                             </div>
                         </div>
 
-                        {/* Section 2: Mosquée */}
+                        {/* Section 2: Lieu (Nom simple) */}
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">Lieu (Mosquée)</label>
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">Lieu</label>
                             <input
                                 type="text"
                                 name="nom_mosquee"
                                 required
                                 className="w-full h-12 px-4 rounded-xl bg-slate-50 border-0 text-slate-900 focus:bg-white focus:ring-2 focus:ring-inset focus:ring-slate-900 transition-all font-medium"
-                                placeholder="Nom de la mosquée"
+                                placeholder="Mosquée de Paris, Funérarium, Domicile..."
                                 value={formData.nom_mosquee}
                                 onChange={handleChange}
                             />
                         </div>
 
-                        {/* Section 3: Adresse et Geo */}
-                        <div className="space-y-1.5">
+                        {/* Section 3: Adresse avec Google Places Autocomplete */}
+                        <div className="space-y-1.5 relative">
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">Adresse complète</label>
-                            <div className="flex gap-2">
+                            <div className="relative group">
                                 <input
+                                    ref={addressInputRef}
                                     type="text"
                                     name="adresse_mosquee"
                                     required
-                                    className="flex-1 h-12 px-4 rounded-xl bg-slate-50 border-0 text-slate-900 focus:bg-white focus:ring-2 focus:ring-inset focus:ring-slate-900 transition-all font-medium"
-                                    placeholder="10 rue de la Paix, 75000 Paris"
+                                    placeholder="Commencez à taper l'adresse..."
+                                    className="w-full h-12 px-4 pl-11 rounded-xl bg-slate-50 border-0 text-slate-900 focus:bg-white focus:ring-2 focus:ring-inset focus:ring-slate-900 transition-all font-medium truncate"
                                     value={formData.adresse_mosquee}
                                     onChange={handleChange}
+                                    disabled={!scriptLoaded}
+                                    autoComplete="off"
                                 />
-                                <button
-                                    type="button"
-                                    onClick={geocodeAddress}
-                                    className="h-12 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors flex items-center gap-2 whitespace-nowrap"
-                                >
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
-                                    <span className="hidden sm:inline">Géolocaliser</span>
-                                </button>
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    {scriptLoaded ? (
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400 group-focus-within:text-slate-800 transition-colors"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                    ) : (
+                                        <span className="loading loading-spinner loading-xs text-slate-400"></span>
+                                    )}
+                                </div>
                             </div>
-                            <p className="text-[10px] text-slate-400 ml-1">Cliquez sur géolocaliser pour remplir les coordonnées automatiquement.</p>
+                            <p className="text-[10px] text-slate-400 ml-1">
+                                {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY === 'VOTRE_CLE_API_GOOGLE_ICI'
+                                    ? "⚠️ Clé API Google manquante. Configurez .env.local"
+                                    : "Propulsé par Google Maps"
+                                }
+                            </p>
                         </div>
 
-                        {/* Coordonnées (Cachées ou discrètes pour debug/expert) */}
-                        <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                            <div className="flex items-center justify-between mb-3">
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">Coordonnées GPS</label>
-                                <span className="text-[10px] text-slate-400 font-mono bg-white px-2 py-1 rounded border border-slate-100">Auto-rempli</span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <span className="text-[10px] text-slate-400 ml-1">Latitude</span>
-                                    <input
-                                        type="number"
-                                        step="any"
-                                        required
-                                        className="w-full h-10 px-3 rounded-lg bg-white border border-slate-200 text-sm font-mono text-slate-600 focus:border-slate-900 focus:ring-0 transition-all"
-                                        value={formData.coordonnees.lat}
-                                        onChange={(e) => handleCoordChange('lat', e.target.value)}
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <span className="text-[10px] text-slate-400 ml-1">Longitude</span>
-                                    <input
-                                        type="number"
-                                        step="any"
-                                        required
-                                        className="w-full h-10 px-3 rounded-lg bg-white border border-slate-200 text-sm font-mono text-slate-600 focus:border-slate-900 focus:ring-0 transition-all"
-                                        value={formData.coordonnees.lng}
-                                        onChange={(e) => handleCoordChange('lng', e.target.value)}
-                                    />
-                                </div>
-                            </div>
+                        {/* Coordonnées (Cachées) */}
+                        <div className="hidden">
+                            <input readOnly value={formData.coordonnees.lat} />
+                            <input readOnly value={formData.coordonnees.lng} />
                         </div>
 
                         {/* Error Message */}
@@ -268,7 +276,7 @@ export default function AddJanazaModal({ user, onClose, onSuccess }: AddJanazaMo
                                     </>
                                 ) : (
                                     <>
-                                        <span>Publier la prière</span>
+                                        <span>Publier</span>
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                                     </>
                                 )}

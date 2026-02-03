@@ -8,7 +8,7 @@ import { Janaza } from '@/types/janaza';
 import dynamic from 'next/dynamic';
 import JanazaCard from '@/components/JanazaCard';
 import AuthModal from '@/components/AuthModal';
-import AddJanazaModal from '@/components/AddJanazaModal';
+import { useRouter } from 'next/navigation';
 
 // Charger la carte dynamiquement (côté client uniquement)
 const MapComponent = dynamic(() => import('@/components/MapComponent'), {
@@ -67,8 +67,8 @@ export default function Home() {
     const [user, setUser] = useState<User | null>(null); // Utilisateur connecté via Firebase
     const [loading, setLoading] = useState(true); // État de chargement initial
     const [showAuthModal, setShowAuthModal] = useState(false); // Visibilité modale connexion
-    const [showAddModal, setShowAddModal] = useState(false); // Visibilité modale ajout
     const [viewMode, setViewMode] = useState<'map' | 'list'>('list'); // Mode d'affichage actuel
+    const router = useRouter();
 
     /**
      * Effet de bord : Gestion de l'authentification.
@@ -127,7 +127,7 @@ export default function Home() {
         if (!user) {
             setShowAuthModal(true);
         } else {
-            setShowAddModal(true);
+            router.push('/ajouter');
         }
     };
 
@@ -273,7 +273,7 @@ export default function Home() {
 
             {/* Modals */}
             {showAuthModal && <AuthModal user={user} onClose={() => setShowAuthModal(false)} />}
-            {showAddModal && user && <AddJanazaModal user={user} onClose={() => setShowAddModal(false)} onSuccess={() => { }} />}
+
         </div>
     );
 }
