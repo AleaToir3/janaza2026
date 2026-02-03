@@ -42,12 +42,11 @@ export default function JanazaCard({ janaza }: JanazaCardProps) {
 
                 {/* Bloc Date & Heure (Aligné à droite) */}
                 <div className="flex flex-col items-end shrink-0 text-right">
-                    <div className="flex items-center gap-1.5 text-slate-900 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100 mb-1">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                        <span className="text-sm font-bold font-mono tracking-tight">{timeString.slice(0, 5)}</span>
-                    </div>
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${isToday ? 'text-green-600' : 'text-slate-400'}`}>
-                        {isToday ? 'Aujourd\'hui' : dayString}
+                    <span className="text-sm font-bold text-slate-900 leading-tight">
+                        {isToday ? 'Aujourd\'hui' : isTomorrow ? 'Demain' : date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                    </span>
+                    <span className="text-xs font-medium text-slate-500 font-mono mt-1">
+                        {timeString.slice(0, 5)}
                     </span>
                 </div>
             </div>

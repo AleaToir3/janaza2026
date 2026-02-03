@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, query, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, Timestamp, where } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth } from '@/lib/firebaseConfig';
 import { Janaza } from '@/types/janaza';
@@ -90,7 +90,7 @@ export default function Home() {
      */
     useEffect(() => {
         try {
-            const q = query(collection(db, 'janazas'), orderBy('heure_priere', 'desc'));
+            const q = query(collection(db, 'janazas'), where('heure_priere', '>=', Timestamp.now()), orderBy('heure_priere', 'asc'));
 
             const unsubscribe = onSnapshot(q, (snapshot) => {
                 const realJanazas: Janaza[] = snapshot.docs.map((doc) => ({
@@ -98,12 +98,13 @@ export default function Home() {
                     ...doc.data(),
                 })) as Janaza[];
 
-                // Fusion : Données réelles + Données Mock pour la démo
-                const combinedJanazas = [...realJanazas, ...MOCK_JANAZAS];
+                // Fusion : Données réelles + Données Mock (filtrées pour le futur)
+                const now = Date.now();
+                const futureMocks = MOCK_JANAZAS.filter(j => j.heure_priere.toMillis() >= now);
+                const combinedJanazas = [...realJanazas, ...futureMocks];
 
-                // Tri chronologique inverse (plus récent en premier)
-                // Note : Pour un vrai usage, on trierait peut-être par date future la plus proche.
-                combinedJanazas.sort((a, b) => b.heure_priere.seconds - a.heure_priere.seconds);
+                // Tri chronologique (plus proche en premier)
+                combinedJanazas.sort((a, b) => a.heure_priere.seconds - b.heure_priere.seconds);
 
                 setJanazas(combinedJanazas);
             }, (error) => {

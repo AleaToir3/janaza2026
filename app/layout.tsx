@@ -8,6 +8,12 @@ export const metadata: Metadata = {
     title: "Janaza Tracker - Suivi des prières funéraires",
     description: "Application de suivi des janazas (prières funéraires) avec carte interactive et notifications",
     keywords: ["janaza", "prière funéraire", "mosquée", "islam", "communauté"],
+    manifest: "/manifest.json",
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: "black-translucent",
+        title: "Janaza Tracker",
+    },
 };
 
 export default function RootLayout({
