@@ -52,7 +52,14 @@ function BottomNavContent() {
                 <span className="text-[10px] font-semibold">Carte</span>
             </Link>
 
-
+            {/* 3. Soutenir (Cœur) */}
+            <Link
+                href="/soutenir"
+                className={`flex flex-col items-center gap-1 p-2 w-full transition-colors ${pathname === '/soutenir' ? 'text-red-500' : 'text-slate-400 hover:text-red-400'}`}
+            >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill={pathname === '/soutenir' ? "currentColor" : "none"} stroke="currentColor" strokeWidth={pathname === '/soutenir' ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                <span className="text-[10px] font-semibold">Soutenir</span>
+            </Link>
 
             {/* 4. Profil / Connexion */}
             <Link
