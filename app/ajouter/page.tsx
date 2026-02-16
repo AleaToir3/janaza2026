@@ -140,9 +140,10 @@ export default function AjouterJanazaPage() {
             <div className="max-w-xl mx-auto md:bg-white md:rounded-3xl md:shadow-xl md:border border-slate-100 overflow-hidden">
 
                 {/* Header Page */}
-                <div className="px-6 py-6 border-b border-slate-100 bg-white sticky top-0 z-10 flex items-center gap-4">
-                    <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-slate-50 text-slate-500">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5" /><path d="M12 19l-7-7 7-7" /></svg>
+
+                <div className="px-6 py-6 border-b border-slate-100 bg-white flex items-center gap-4">
+                    <button onClick={() => router.push('/')} className="p-2 -ml-2 rounded-full hover:bg-slate-50 text-slate-500 transition-colors">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                     </button>
                     <div>
                         <h1 className="text-xl font-bold text-slate-900">Nouvelle Prière</h1>

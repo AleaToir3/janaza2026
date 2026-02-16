@@ -3,19 +3,38 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Collection janazas
+    // --- Collection: janazas ---
     match /janazas/{janazaId} {
-      // Lecture publique : tout le monde peut lire les janazas
+      // Lecture : Publique
       allow read: if true;
       
-      // Création : uniquement pour les utilisateurs authentifiés
+      // Création : Authentifié + Doit marquer le bon UID
       allow create: if request.auth != null 
-                    && request.resource.data.created_by == request.auth.uid
-                    && request.resource.data.created_at == request.time;
+                    && request.resource.data.created_by == request.auth.uid;
       
-      // Mise à jour et suppression : uniquement le créateur du document
+      // Modif/Suppression : Seulement le créateur
       allow update, delete: if request.auth != null 
-                            && request.auth.uid == resource.data.created_by;
+                            && resource.data.created_by == request.auth.uid;
+    }
+
+    // --- Collection: saved_janazas (Les favoris/suivis) ---
+    match /saved_janazas/{saveId} {
+      // Lecture : Uniquement mes propres favoris
+      allow read: if request.auth != null 
+                  && resource.data.user_id == request.auth.uid;
+
+      // Création : Authentifié + Je dois m'enregistrer moi-même
+      allow create: if request.auth != null 
+                    && request.resource.data.user_id == request.auth.uid;
+      
+      // Suppression : Uniquement mes propres favoris
+      allow delete: if request.auth != null 
+                    && resource.data.user_id == request.auth.uid;
+    }
+    
+    // --- Collection: users (Optionnel pour le futur) ---
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

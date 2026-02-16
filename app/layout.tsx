@@ -16,6 +16,11 @@ export const metadata: Metadata = {
     },
 };
 
+import Navbar from "@/components/Navbar";
+import BottomNav from "@/components/BottomNav";
+
+// ... (Metadata)
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -24,7 +29,9 @@ export default function RootLayout({
     return (
         <html lang="fr" data-theme="light">
             <body className={inter.className}>
+                <Navbar />
                 {children}
+                <BottomNav />
             </body>
         </html>
     );
