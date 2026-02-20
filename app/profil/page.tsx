@@ -245,7 +245,10 @@ export default function ProfilPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {myPosts.map((janaza) => (
                                         <div key={janaza.id} className="relative group animate-in fade-in-up duration-300">
-                                            <JanazaCard janaza={janaza} />
+                                            <JanazaCard
+                                                janaza={janaza}
+                                                onDeleted={(id) => setMyPosts(prev => prev.filter(j => j.id !== id))}
+                                            />
                                         </div>
                                     ))}
                                 </div>

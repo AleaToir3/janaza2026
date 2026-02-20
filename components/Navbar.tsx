@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { auth } from '@/lib/firebaseConfig';
-import { signOut } from 'firebase/auth';
 import { useState, useEffect, Suspense } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
@@ -20,10 +19,6 @@ function NavbarContent() {
         return () => unsubscribe();
     }, []);
 
-    const handleLogout = async () => {
-        await signOut(auth);
-        router.push('/');
-    };
 
     const isMapView = searchParams.get('view') === 'map';
 

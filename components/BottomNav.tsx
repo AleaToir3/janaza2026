@@ -4,9 +4,7 @@ import Link from 'next/link';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebaseConfig';
-import { useState, useEffect } from 'react';
-
-import { Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 
 function BottomNavContent() {
     const pathname = usePathname();

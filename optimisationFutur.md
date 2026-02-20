@@ -1,0 +1,1 @@
+Attention : Pour éviter de faire 50 requêtes Firestore si on a 50 cartes, l'idéal serait de charger tous les IDs des favoris de l'utilisateur au chargement de l'app (dans un Context) et de juste vérifier si l'ID est dans la liste
