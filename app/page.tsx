@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { collection, query, orderBy, onSnapshot, Timestamp, where } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
 import { db } from '@/lib/firebaseConfig';
 import { Janaza } from '@/types/janaza';
 import dynamic from 'next/dynamic';
@@ -20,39 +20,6 @@ const MapComponent = dynamic(() => import('@/components/MapComponent'), {
     ),
 });
 
-// --- Données Mock ---
-const MOCK_JANAZAS: Janaza[] = [
-    {
-        id: 'mock1',
-        nom_defunt: 'Amine Ben Ahmed',
-        heure_priere: Timestamp.fromDate(new Date(Date.now() + 3600000 * 2)),
-        nom_mosquee: 'Grande Mosquée de Paris',
-        adresse_mosquee: "2bis Place du Puits de l'Ermite, 75005 Paris",
-        coordonnees: { lat: 48.8421, lng: 2.3556 },
-        created_by: 'system',
-        created_at: Timestamp.now(),
-    },
-    {
-        id: 'mock2',
-        nom_defunt: 'Fatima Zahra',
-        heure_priere: Timestamp.fromDate(new Date(Date.now() + 3600000 * 5)),
-        nom_mosquee: 'Mosquée de Gennevilliers',
-        adresse_mosquee: '18 Rue Paul Vaillant Couturier, 92230 Gennevilliers',
-        coordonnees: { lat: 48.9284, lng: 2.2989 },
-        created_by: 'system',
-        created_at: Timestamp.now(),
-    },
-    {
-        id: 'mock3',
-        nom_defunt: 'Ibrahim Diallo',
-        heure_priere: Timestamp.fromDate(new Date(Date.now() + 3600000 * 24)),
-        nom_mosquee: 'Mosquée de Créteil',
-        adresse_mosquee: '4 Rue Jean Gabin, 94000 Créteil',
-        coordonnees: { lat: 48.7758, lng: 2.4578 },
-        created_by: 'system',
-        created_at: Timestamp.now(),
-    },
-];
 
 // --- Formule Haversine : calcule la distance en km entre deux points GPS ---
 function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -138,33 +105,31 @@ function HomeContent() {
         );
     }, []);
 
-    // 2. Chargement Firestore
+    // 2. Chargement Firestore (données réelles uniquement)
     useEffect(() => {
         try {
+            const now = new Date();
             const q = query(
                 collection(db, 'janazas'),
-                where('heure_priere', '>=', Timestamp.now()),
+                where('heure_priere', '>=', now),
                 orderBy('heure_priere', 'asc')
             );
 
             const unsubscribe = onSnapshot(q, (snapshot) => {
-                const realJanazas: Janaza[] = snapshot.docs.map((doc) => ({
+                const janazas: Janaza[] = snapshot.docs.map((doc) => ({
                     id: doc.id,
                     ...doc.data(),
                 })) as Janaza[];
-
-                const now = Date.now();
-                const futureMocks = MOCK_JANAZAS.filter(j => j.heure_priere.toMillis() >= now);
-                const combined = [...realJanazas, ...futureMocks];
-                combined.sort((a, b) => a.heure_priere.seconds - b.heure_priere.seconds);
-                setJanazas(combined);
-            }, () => {
-                setJanazas(MOCK_JANAZAS);
+                setJanazas(janazas);
+            }, (error) => {
+                console.error('Erreur Firestore:', error);
+                setJanazas([]);
             });
 
             return () => unsubscribe();
-        } catch {
-            setJanazas(MOCK_JANAZAS);
+        } catch (e) {
+            console.error('Erreur init Firestore', e);
+            setJanazas([]);
         }
     }, []);
 
