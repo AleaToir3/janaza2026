@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
 import { Janaza } from '@/types/janaza';
 
@@ -52,7 +52,7 @@ export default function MapComponent({ janazas }: MapComponentProps) {
     }, []);
 
     // Mettre à jour les bounds si la liste change
-    useMemo(() => {
+    useEffect(() => {
         if (map && janazas.length > 0) {
             const bounds = new window.google.maps.LatLngBounds();
             janazas.forEach(janaza => {

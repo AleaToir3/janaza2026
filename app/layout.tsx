@@ -19,8 +19,6 @@ export const metadata: Metadata = {
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
 
-// ... (Metadata)
-
 export default function RootLayout({
     children,
 }: Readonly<{
