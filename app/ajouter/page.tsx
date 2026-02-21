@@ -97,6 +97,9 @@ export default function AjouterJanazaPage() {
 
         try {
             if (!formData.adresse_mosquee) throw new Error("Veuillez choisir une adresse valide.");
+            if (!formData.nom_defunt.trim()) throw new Error("Veuillez saisir le nom du défunt.");
+            if (formData.nom_defunt.trim().length > 100) throw new Error("Le nom du défunt ne peut pas dépasser 100 caractères.");
+            if (formData.nom_mosquee.trim().length > 150) throw new Error("Le nom du lieu ne peut pas dépasser 150 caractères.");
 
             // Création de la Janaza
             await addDoc(collection(db, 'janazas'), {
@@ -163,6 +166,7 @@ export default function AjouterJanazaPage() {
                                     placeholder="Ex: Mohamed Ali"
                                     className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-200 focus:border-slate-900 focus:ring-0 transition-all font-medium"
                                     required
+                                    maxLength={100}
                                     value={formData.nom_defunt}
                                     onChange={handleChange}
                                 />
@@ -193,6 +197,7 @@ export default function AjouterJanazaPage() {
                                     placeholder="Ex: Grande Mosquée de Lyon"
                                     className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-200 focus:border-slate-900 focus:ring-0 transition-all font-medium"
                                     required
+                                    maxLength={150}
                                     value={formData.nom_mosquee}
                                     onChange={handleChange}
                                 />

@@ -2,39 +2,59 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
+    // --- Fonctions utilitaires ---
+    function isAuth() {
+      return request.auth != null;
+    }
+    function isOwner(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+    function validJanazaFields(data) {
+      return data.nom_defunt is string && data.nom_defunt.size() <= 100
+          && data.nom_mosquee is string && data.nom_mosquee.size() <= 150
+          && data.adresse_mosquee is string && data.adresse_mosquee.size() <= 300
+          && data.coordonnees is map
+          && data.heure_priere is timestamp;
+    }
+
     // --- Collection: janazas ---
     match /janazas/{janazaId} {
-      // Lecture : Publique
+      // Lecture : Publique (prières communautaires)
       allow read: if true;
-      
-      // Création : Authentifié + Doit marquer le bon UID
-      allow create: if request.auth != null 
-                    && request.resource.data.created_by == request.auth.uid;
-      
-      // Modif/Suppression : Seulement le créateur
-      allow update, delete: if request.auth != null 
-                            && resource.data.created_by == request.auth.uid;
+
+      // Création : Authentifié + UID correct + champs valides
+      allow create: if isAuth()
+                    && request.resource.data.created_by == request.auth.uid
+                    && validJanazaFields(request.resource.data);
+
+      // Modification : Seulement le créateur + champs valides
+      allow update: if isOwner(resource.data.created_by)
+                    && validJanazaFields(request.resource.data);
+
+      // Suppression : Seulement le créateur
+      allow delete: if isOwner(resource.data.created_by);
     }
 
-    // --- Collection: saved_janazas (Les favoris/suivis) ---
+    // --- Collection: saved_janazas (Favoris) ---
     match /saved_janazas/{saveId} {
-      // Lecture : Uniquement mes propres favoris
-      allow read: if request.auth != null 
-                  && resource.data.user_id == request.auth.uid;
+      // Lecture : Uniquement ses propres favoris
+      allow read: if isOwner(resource.data.user_id);
 
-      // Création : Authentifié + Je dois m'enregistrer moi-même
-      allow create: if request.auth != null 
+      // Création : Authentifié + UID correct
+      allow create: if isAuth()
                     && request.resource.data.user_id == request.auth.uid;
-      
-      // Suppression : Uniquement mes propres favoris
-      allow delete: if request.auth != null 
-                    && resource.data.user_id == request.auth.uid;
+
+      // Modification : Interdite (un favori ne se modifie pas)
+      allow update: if false;
+
+      // Suppression : Uniquement ses propres favoris
+      allow delete: if isOwner(resource.data.user_id);
     }
-    
-    // --- Collection: users (Optionnel pour le futur) ---
+
+    // --- Collection: users ---
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
     }
   }
 }
